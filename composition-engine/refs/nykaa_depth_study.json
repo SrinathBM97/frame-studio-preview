@@ -1,0 +1,54 @@
+{
+  "id": "nykaa-depth-mood-reference-001",
+  "source": "human_reference_study",
+  "provenance": {
+    "image_sha256": "62fa2dd394dc48e154ad95a62b8e814781a2c661f093a416a970605b775b8c88",
+    "image_name": "nykaa-depth-composition-reference-thumb.jpg",
+    "annotation_method": "visually estimated for architecture validation; NOT automatic AI interpretation",
+    "visual_reference_only": true,
+    "no_product_pixel_transfer": true
+  },
+  "boxes": {
+    "secondary": {
+      "bbox": [
+        0.112,
+        0.36,
+        0.236,
+        0.601
+      ],
+      "label": "left dark perfume bottle",
+      "z": 2
+    },
+    "hero": {
+      "bbox": [
+        0.331,
+        0.103,
+        0.392,
+        0.821
+      ],
+      "label": "central sculptural shoe",
+      "z": 1
+    },
+    "wide": {
+      "bbox": [
+        0.705,
+        0.239,
+        0.242,
+        0.687
+      ],
+      "label": "right amber bottle",
+      "z": 0
+    },
+    "accent": {
+      "bbox": [
+        0.505,
+        0.622,
+        0.316,
+        0.337
+      ],
+      "label": "foreground pink bottle",
+      "z": 3
+    }
+  },
+  "notes": "Scene topology and negative space only. Reference includes props and a background; they must not be copied into FRAME output."
+}
