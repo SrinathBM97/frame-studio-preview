@@ -446,9 +446,19 @@ function boxOverlap(a,b){
 function sampleProductMask(item){
   const c=cropOf(item),tile=makeCanvas(96,96),ct=ctx2(tile);
   ct.clearRect(0,0,96,96);ct.drawImage(item.mask,c.x,c.y,c.w,c.h,0,0,96,96);
-  const d=ct.getImageData(0,0,96,96).data,a=new Uint8Array(96*96);
-  for(let i=0;i<a.length;i++)a[i]=d[i*4+3];
-  return {a,at:(x,y)=>a[Math.min(95,Math.max(0,Math.floor(y*96)))*96+Math.min(95,Math.max(0,Math.floor(x*96)))]};
+  const d=ct.getImageData(0,0,96,96).data,a=new Uint8Array(96*96),yval=new Float32Array(96*96),energy=new Float32Array(96*96);
+  for(let i=0;i<a.length;i++){let k=i*4;a[i]=d[k+3];yval[i]=.2126*d[k]+.7152*d[k+1]+.0722*d[k+2];}
+  // Content-protection heatmap from actual photographic edges: text/logos have local contrast.
+  // It does not OCR or reconstruct artwork, and it is not a verified label detector.
+  for(let y=3;y<93;y++)for(let x=3;x<93;x++){
+    const ix=y*96+x;if(a[ix]<225)continue;
+    const ixL=ix-2,ixR=ix+2,ixT=ix-192,ixB=ix+192;
+    if(Math.min(a[ixL],a[ixR],a[ixT],a[ixB])<220)continue;
+    const edge=Math.max(Math.abs(yval[ixR]-yval[ixL]),Math.abs(yval[ixB]-yval[ixT]));
+    energy[ix]=Math.min(1,Math.max(0,(edge-10)/52));
+  }
+  return {a,at:(x,y)=>a[Math.min(95,Math.max(0,Math.floor(y*96)))*96+Math.min(95,Math.max(0,Math.floor(x*96)))],
+   important:(x,y)=>energy[Math.min(95,Math.max(0,Math.floor(y*96)))*96+Math.min(95,Math.max(0,Math.floor(x*96)))]};
 }
 // FRAME Composition Planner 2: silhouette- and label-protection-first candidate search.
 // This is a research-grade geometric planner. It does not claim semantic OCR or human art-direction review.
@@ -471,7 +481,7 @@ function layoutMetrics(raw,samples){
    if(p.y<200)hard+=(200-p.y)*.8;
    if(p.y+p.h>1830)hard+=(p.y+p.h-1830)*1.1;
    const foot=p.y+p.h;
-   if(foot<1505||foot>1780)hard+=Math.abs(foot-1640)*.4;
+   if(foot<1440||foot>1830)hard+=Math.abs(foot-1640)*.33;
    // Confirm each visible label area survives every foreground layer, not just pairwise bbox intersection.
    const sample=samples.get(p.id),zone=labelRegion(p.category);let labelCount=0,hidden=0,shapeCount=0,occluded=0;
    for(let j=0;j<24;j++)for(let i=0;i<20;i++){
@@ -485,13 +495,18 @@ function layoutMetrics(raw,samples){
          if((samples.get(q.id)?.at(qu,qv)||0)>135){over=true;break}
       }
       shapeCount++;if(over)occluded++;
-      if(u>zone.l&&u<zone.r&&v>zone.t&&v<zone.b){labelCount++;if(over)hidden++}
+      const central=(u>zone.l&&u<zone.r&&v>zone.t&&v<zone.b);
+      const printWeight=.15+(central?1:0)+(sample?.important(u,v)||0)*3.5;
+      labelCount+=printWeight;if(over)hidden+=printWeight;
    }
    const labelCover=hidden/Math.max(labelCount,1),bodyCover=occluded/Math.max(shapeCount,1);
+   if(labelCover>(p.z===0?.17:p.z===1?.09:.045))hard+=600*(labelCover-(p.z===0?.17:p.z===1?.09:.045))/.05;
    coverage.push({id:p.id,labelCover,bodyCover});
    // Broad obstruction of package text is a hard creative failure, not a minor aesthetic preference.
-   labelPenalty+=Math.pow(labelCover/.055,1.8)*85;
-   occlusionPenalty+=Math.pow(Math.max(0,bodyCover-.12)/.06,1.8)*100;
+   const labelTolerance=p.z===0?.13:p.z===1?.055:.022;
+   const bodyTolerance=p.z===0?.32:p.z===1?.18:.12;
+   labelPenalty+=Math.pow(labelCover/labelTolerance,1.8)*(p.z===0?52:110);
+   occlusionPenalty+=Math.pow(Math.max(0,bodyCover-bodyTolerance)/.09,1.6)*(p.z===0?55:95);
  }
  // Connectedness must be real, but overlap should not destroy central product information.
  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
@@ -536,24 +551,27 @@ function layoutFor(kind,seed){
  const choose=(role,sorted)=>{const x=sorted.find(p=>!byId.has(p.id));if(x){roles[role]=x;byId.add(x.id)}};
  // A broad box or compact is a rear plane; a tall cleanser/foundation is primary.
  const tall=[...all].sort((a,b)=>b.h-a.h),wide=[...all].sort((a,b)=>b.aspect-a.aspect);
- choose('hero',[...all.filter(p=>['foundation','cleanser'].includes(p.category)),...tall]);
- choose('wide',[...all.filter(p=>['mask','compact'].includes(p.category)),...wide]);
+ const alternativeHero=all.filter(p=>['serum','concealer'].includes(p.category) && p.h >= tall[0].h*.70).sort((a,b)=>b.h-a.h);
+ choose('hero',kind===1?[...alternativeHero,...tall]:[...all.filter(p=>['foundation','cleanser'].includes(p.category)),...tall]);
+ if(all.some(p=>['mask','compact'].includes(p.category) || p.aspect>1.12))
+   choose('wide',[...all.filter(p=>['mask','compact'].includes(p.category)),...wide]);
  choose('accent',[...all.filter(p=>['lipstick','serum'].includes(p.category)).sort((a,b)=>a.h-b.h),...all.sort((a,b)=>a.h-b.h)]);
  choose('support',tall);
  const plans=[
   // An anchored tall hero, supporting tall product, rear wide plane, and forward detail.
-  {name:'Hero Cascade',hero:[730,1650,2],support:[1100,1634,1],wide:[1435,1570,0],accent:[1330,1715,3]},
+  {name:'Hero Cascade',hero:[720,1660,2],support:[1060,1700,1],wide:[1380,1480,0],accent:[1540,1780,3]},
   // Wide supporting geometry enters from the left; hero is central, second tall on the right.
-  {name:'Diagonal Depth',hero:[960,1670,2],support:[1400,1615,1],wide:[615,1580,0],accent:[1180,1730,3]},
+  {name:'Diagonal Depth',hero:[1020,1670,2],support:[1450,1720,1],wide:[690,1475,0],accent:[710,1790,3]},
   // Strong right-hand hero and left-side structural weight; accent crosses the visual axis.
-  {name:'Editorial Offset',hero:[1400,1660,2],support:[970,1640,1],wide:[600,1590,0],accent:[1115,1720,3]}
+  {name:'Editorial Offset',hero:[1440,1690,2],support:[1010,1660,1],wide:[655,1470,0],accent:[1175,1800,3]}
  ];
  const pattern=plans[kind],best=[];
  for(let iter=0;iter<210;iter++){
     const positions=[];
     for(const role of ['wide','support','hero','accent']){
        const p=roles[role];if(!p)continue;
-       const base=pattern[role];
+       const base=[...pattern[role]];
+       if(!roles.wide && role==='accent')base[0]=kind===0?1190:kind===1?830:1160;
        // A narrow search around deliberately different art-directed directions.
        const jitterX=iter===0?0:(rand()-.5)*180;
        const jitterY=iter===0?0:(rand()-.5)*34;
@@ -567,30 +585,49 @@ function layoutFor(kind,seed){
 }
 function getPosition(item,layout){return layout.positions.find(x=>x.id===item.id)}
 function rgba(hex,opacity){let n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${opacity})`}
+function footprint(item){
+ const c=cropOf(item),m=ctx2(item.mask).getImageData(c.x,c.y,c.w,c.h).data;
+ let l=c.w,r=-1,total=0,sum=0;
+ const y0=Math.max(0,Math.floor(c.h*.965));
+ for(let y=y0;y<c.h;y++)for(let x=0;x<c.w;x++){
+  if(m[(y*c.w+x)*4+3]>120){l=Math.min(l,x);r=Math.max(r,x);sum+=x;total++}
+ }
+ if(total<3)return {center:.5,width:.58};
+ return {center:sum/total/c.w,width:Math.min(.95,Math.max(.3,(r-l+1)/c.w))};
+}
 function drawCompose(ctx,layout,W=2000){
  ctx.clearRect(0,0,W,W);if(!layout)return;
- const items=[...state.items].sort((a,b)=>(getPosition(a,layout)?.z||0)-(getPosition(b,layout)?.z||0));
  const dim=W/2000;
- // Soft, bounded radial contact shadows with continuous alpha falloff.
- for(let item of items){
-  const p=getPosition(item,layout),box=cropOf(item);if(!p)continue;
-  const w=p.h*box.w/box.h*dim,x=p.x*dim,y=(p.y+p.h)*dim;
-  const rad=Math.max(20,Math.min(w*.18 + state.blur*dim*1.3,150*dim));
-  ctx.save();ctx.translate(x,y+4*dim);ctx.scale(1,.11);
-  const grad=ctx.createRadialGradient(0,0,0,0,0,rad);
-  const opacity=Math.min(.22,state.opacity/100);
-  grad.addColorStop(0,rgba(state.ground,opacity*.24));
-  grad.addColorStop(.45,rgba(state.ground,opacity*.11));
-  grad.addColorStop(1,rgba(state.ground,0));
-  ctx.fillStyle=grad;ctx.beginPath();ctx.arc(0,0,rad,0,Math.PI*2);ctx.fill();ctx.restore();
+ const items=[...state.items].sort((a,b)=>(getPosition(a,layout)?.z||0)-(getPosition(b,layout)?.z||0));
+ function ellipseShadow(x,y,rx,ry,opacity){
+   if(opacity<=0)return;
+   ctx.save();ctx.translate(x,y);ctx.scale(Math.max(2,rx),Math.max(2,ry));
+   const g=ctx.createRadialGradient(0,0,0,0,0,1);
+   g.addColorStop(0,rgba(state.ground,opacity));
+   g.addColorStop(.28,rgba(state.ground,opacity*.85));
+   g.addColorStop(.68,rgba(state.ground,opacity*.24));
+   g.addColorStop(1,rgba(state.ground,0));
+   ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.fill();ctx.restore();
  }
- for(let item of items){
-  const p=getPosition(item,layout),box=cropOf(item);if(!p)continue;
-  const h=p.h*dim,w=h*box.w/box.h,x=p.x*dim-w/2,y=p.y*dim;
-  ctx.save();
-  // Cast onto rear items by using real product alpha, not flat ellipses in mid-air.
-  if(p.z>0&&state.overlapAmt>0){ctx.shadowColor=rgba(state.overlap,Math.min(.20,state.overlapAmt/580));ctx.shadowBlur=Math.max(2,state.blur*.48)*dim;ctx.shadowOffsetX=-5*dim;ctx.shadowOffsetY=6*dim;}
-  ctx.drawImage(item.mask,box.x,box.y,box.w,box.h,x,y,w,h);ctx.restore();
+ for(const item of items){
+   const p=getPosition(item,layout);if(!p)continue;
+   const fp=footprint(item),foot=(p.y+p.h)*dim;
+   const x=(p.x-p.w/2+fp.center*p.w)*dim;
+   const contactWidth=Math.max(18,Math.min(p.w*.86,p.w*fp.width*.76))*dim;
+   const strength=Math.min(.65,state.opacity/100);
+   ellipseShadow(x,foot+7*dim,contactWidth*.88+state.blur*dim,contactWidth*.135+7*dim,strength*.33);
+   ellipseShadow(x,foot+2*dim,contactWidth*.65+5*dim,Math.max(4,contactWidth*.065),strength*.77);
+ }
+ for(const item of items){
+   const p=getPosition(item,layout),box=cropOf(item);if(!p)continue;
+   const h=p.h*dim,w=p.w*dim,x=(p.x-p.w/2)*dim,y=p.y*dim;
+   ctx.save();
+   if(p.z>0&&state.overlapAmt>0){
+      ctx.shadowColor=rgba(state.overlap,Math.min(.34,state.overlapAmt/100*.30));
+      ctx.shadowBlur=Math.max(2,state.blur*.67)*dim;
+      ctx.shadowOffsetX=-6*dim;ctx.shadowOffsetY=11*dim;
+   }
+   ctx.drawImage(item.mask,box.x,box.y,box.w,box.h,x,y,w,h);ctx.restore();
  }
 }
 function renderOptions(){const root=$('options');root.innerHTML='';state.layouts.forEach((layout,i)=>{let box=document.createElement('div');box.className='option'+(i===state.active?' selected':'');let cv=makeCanvas(480,480);drawCompose(ctx2(cv),layout,480);cv.className='';let label=document.createElement('div');label.className='optionlabel';let b=document.createElement('b');b.textContent=['Hero Cascade','Diagonal Depth','Editorial Offset'][layout.kind]||'Option';let s=document.createElement('small');s.textContent='0'+(i+1);label.append(b,s);box.append(cv,label);box.onclick=()=>{state.active=i;renderOptions();renderComposite()};root.append(box)})}
