@@ -140,7 +140,7 @@ body.focus-mode .intro,body.focus-mode .studio-shellbar,body.focus-mode .footer{
   <div id="guideReport" class="guide-report"></div>
   <div class="note">This check extracts readable PDF text, HEX colors and font references when available. Graphic-only pages or unstructured creative rules require a human review; successful text extraction is not proof of full brand compliance.</div>
  </section>
-</div><div class="layout hidden" id="screen-compose"><div class="stage-caption"><span>STAGE 03 / COMPOSITION</span><strong>Explore beyond a single layout.</strong><small>Three directions, one exact set of original products.</small></div><section class="panel"><div class="section"><div><h2>Composition controls</h2><div class="sub">Layouts vary, original products and size ratios don't.</div></div></div><button class="primary" id="generateBtn" style="width:100%">✦ Generate 3 options</button><div class="optgrid" id="options"></div><div class="controls"><button id="regenBtn">↻ Regenerate all</button><button id="regenOneBtn">Regenerate selected</button></div><div class="separator"></div><div class="precision-head"><h2>Precision layer inspector</h2><span class="chip">SCALE LOCKED</span></div>
+</div><div class="layout hidden" id="screen-compose"><div class="stage-caption"><span>STAGE 03 / COMPOSITION</span><strong>Explore beyond a single layout.</strong><small>Hero Cascade · Diagonal Depth · Editorial Offset · locked scale ratios.</small></div><section class="panel"><div class="section"><div><h2>Composition controls</h2><div class="sub">Layouts vary, original products and size ratios don't.</div></div></div><button class="primary" id="generateBtn" style="width:100%">✦ Generate 3 options</button><div class="optgrid" id="options"></div><div class="controls"><button id="regenBtn">↻ Regenerate all</button><button id="regenOneBtn">Regenerate selected</button></div><div class="separator"></div><div class="precision-head"><h2>Precision layer inspector</h2><span class="chip">SCALE LOCKED</span></div>
 <div class="sub" style="margin:7px 0 12px">Inspect and reposition individual original packshots. No generative edits. Product height ratios remain locked.</div>
 <div id="precisionLayers" class="precision-layers" aria-label="Composition layers"></div>
 <div class="precision-controls">
@@ -215,7 +215,7 @@ const PDF_SKU_CATALOG=[
  {re:/nykaa/i,required:/stay[\s_-]*all[\s_-]*day/i,ref:741,category:'lipstick',name:'Nykaa Stay All Day Lipstick 3.5 g (open + cap)',page:3},
  {re:/maybelline/i,required:/fit[\s_-]*me|compact|pressed[\s_-]*powder/i,ref:680,category:'compact',name:'Maybelline Fit Me Compact (open-pose category proxy)',page:7,proxy:true},
  {re:/cosrx/i,required:/snail|mucin|essence/i,ref:1340,category:'serum',name:'COSRX Advanced Snail 96 Mucin Power Essence 100 ml',page:11},
- {re:/dot[\s_-]*[&n]*[\s_-]*key/i,required:/strawberry|niacinamide/i,ref:781,category:'serum',name:'Dot & Key Strawberry Bright Niacinamide Serum 30 ml',page:11}
+ {re:/dot[\s_-]*(?:and|&|n)?[\s_-]*key/i,required:/strawberry|niacinamide/i,ref:781,category:'serum',name:'Dot & Key Strawberry Bright Niacinamide Serum 30 ml',page:11}
 ];
 function identifyProduct(name,aspect,fp){
  const known=SOURCE_MATCHES[fp];if(known)return {...known};
@@ -305,7 +305,7 @@ function analyzeMask(item){
  for(let y=0;y<H;y+=2)for(let x=0;x<W;x+=2){
   const k=(y*W+x)*4,a=out[k+3],low=Math.min(orig[k],orig[k+1],orig[k+2]);
   if(a<20)clear++;if(a>220){solid++;if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;}
-  if(low<210 && x>W*.2&&x<W*.8&&y>H*.1&&y<H*.89){strong++;if(a<150)cutProtected++;}
+  if(orig[k+3]>235 && low<210 && x>W*.2&&x<W*.8&&y>H*.1&&y<H*.89){strong++;if(a<150)cutProtected++;}
   if(a>20&&a<230){semi++;if(low>245)nearWhiteEdge++;}
   if((x<5||x>W-6||y<5||y>H-6)&&a>130)edgeOpaque++;
  }
@@ -434,7 +434,7 @@ function generate(){
  if(state.items.length<3){toast('Add three or four products first.');return}
  if(state.items.some(it=>!it.processed||!it.approved)){toast('Review and approve all cutouts before generating layouts.');tab('upload');return}
  state.layouts=[0,1,2].map(kind=>layoutFor(kind,state.seed++));state.active=0;
- renderOptions();renderComposite();toast('Generated 3 role-aware layouts. Verify unknown sizes; these are draft compositions.');
+ renderOptions();renderComposite();toast('Three distinct composition directions generated. Check masks, size evidence and label visibility before export.');
 }
 function boxOverlap(a,b){
  const left=Math.max(a.x-a.w/2,b.x-b.w/2),right=Math.min(a.x+a.w/2,b.x+b.w/2);
@@ -450,99 +450,117 @@ function sampleProductMask(item){
   for(let i=0;i<a.length;i++)a[i]=d[i*4+3];
   return {a,at:(x,y)=>a[Math.min(95,Math.max(0,Math.floor(y*96)))*96+Math.min(95,Math.max(0,Math.floor(x*96)))]};
 }
-function evaluateLayout(raw,samples){
-  if(!raw.length)return -1e6;
-  const n=raw.length;let risk=0,interactions=0,hard=0,hiddenLabel=0;
-  const minx=Math.min(...raw.map(p=>p.x-p.w/2)),maxx=Math.max(...raw.map(p=>p.x+p.w/2));
-  const top=Math.min(...raw.map(p=>p.y)),bottom=Math.max(...raw.map(p=>p.y+p.h));
-  const center=(minx+maxx)/2,baseline=raw.reduce((a,p)=>a+p.y+p.h,0)/n;
-  for(let i=0;i<n;i++){
-    const p=raw[i],end=p.y+p.h;
-    if(p.x-p.w/2<175||p.x+p.w/2>1825||p.y<115||end>1825)hard+=40;
-    hard+=Math.max(0,Math.abs(end-baseline)-34)*.24;
-    for(let j=i+1;j<n;j++){
-      const q=raw[j],back=p.z<q.z?p:q,front=p.z<q.z?q:p;
-      const intersect=boxOverlap(p,q);
-      if(intersect<=0)continue;
-      const ax=Math.max(back.x-back.w/2,front.x-front.w/2),bx=Math.min(back.x+back.w/2,front.x+front.w/2);
-      const ay=Math.max(back.y,front.y),by=Math.min(back.y+back.h,front.y+front.h);
-      const bmask=samples?.get(back.id),fmask=samples?.get(front.id);
-      let seenBack=0,covered=0,seenLabel=0,coveredLabel=0;
-      const nx=9,ny=11;
-      for(let yy=0;yy<ny;yy++)for(let xx=0;xx<nx;xx++){
-        const X=ax+(xx+.5)*(bx-ax)/nx,Y=ay+(yy+.5)*(by-ay)/ny;
-        const bu=(X-(back.x-back.w/2))/back.w,bv=(Y-back.y)/back.h;
-        const fu=(X-(front.x-front.w/2))/front.w,fv=(Y-front.y)/front.h;
-        const backOn=bmask?bmask.at(bu,bv)>115:true;
-        if(!backOn)continue;
-        seenBack++;
-        const label=(bu>.22&&bu<.78&&bv>.27&&bv<.75);
-        if(label)seenLabel++;
-        if(fmask?fmask.at(fu,fv)>115:true){covered++;if(label)coveredLabel++;}
-      }
-      const cover=covered/Math.max(1,seenBack),lcover=coveredLabel/Math.max(1,seenLabel);
-      interactions+=cover;
-      if(lcover>.08)hiddenLabel+=Math.pow(lcover-.08,1.2)*160;
-      if(cover>.28)risk+=Math.pow(cover-.28,1.1)*160;
-      if(cover<.015)risk+=2;
-    }
-  }
-  const span=maxx-minx,hspan=bottom-top;
-  const spread=Math.max(0,span-1570)/14+Math.max(0,1000-span)/18;
-  const density=raw.reduce((a,p)=>a+p.w*p.h,0)/Math.max(1,span*hspan);
-  const balance=Math.abs(center-1000)/9;
-  const flatPenalty=n>2&&interactions<.025?28:0;
-  return 140 - risk - hiddenLabel - hard - spread - balance - flatPenalty - Math.abs(density-.68)*26;
+// FRAME Composition Planner 2: silhouette- and label-protection-first candidate search.
+// This is a research-grade geometric planner. It does not claim semantic OCR or human art-direction review.
+function layoutCategory(it){const c=cropOf(it);return it.category||classify(it.name,c.w/Math.max(1,c.h))}
+function labelRegion(category){
+ // Approximate central-print zones until on-image label detection is validated.
+ if(['compact','mask'].includes(category))return {l:.19,r:.83,t:.19,b:.70};
+ if(category==='lipstick')return {l:.23,r:.77,t:.40,b:.88};
+ return {l:.19,r:.82,t:.27,b:.84};
 }
-function fitLayout(raw){
- // One uniform scale factor means that PDF height ratios are mathematically invariant.
- let left=Math.min(...raw.map(p=>p.x-p.w/2)),right=Math.max(...raw.map(p=>p.x+p.w/2));
- let top=Math.min(...raw.map(p=>p.y)),bottom=Math.max(...raw.map(p=>p.y+p.h));
- const scale=Math.min(1,1590/Math.max(1,right-left),1390/Math.max(1,bottom-top));
+function layoutMetrics(raw,samples){
+ const n=raw.length; if(n<3)return {score:-1e6,visible:false};
+ const minx=Math.min(...raw.map(p=>p.x-p.w/2)),maxx=Math.max(...raw.map(p=>p.x+p.w/2));
+ const top=Math.min(...raw.map(p=>p.y)),bottom=Math.max(...raw.map(p=>p.y+p.h));
+ const span=maxx-minx, tall=bottom-top;
+ let hard=0,labelPenalty=0,occlusionPenalty=0,spreadPenalty=0,interaction=0,coverage=[];
+ for(const p of raw){
+   if(p.x-p.w/2<195)hard+=(195-(p.x-p.w/2))*.9;
+   if(p.x+p.w/2>1805)hard+=(p.x+p.w/2-1805)*.9;
+   if(p.y<200)hard+=(200-p.y)*.8;
+   if(p.y+p.h>1830)hard+=(p.y+p.h-1830)*1.1;
+   const foot=p.y+p.h;
+   if(foot<1505||foot>1780)hard+=Math.abs(foot-1640)*.4;
+   // Confirm each visible label area survives every foreground layer, not just pairwise bbox intersection.
+   const sample=samples.get(p.id),zone=labelRegion(p.category);let labelCount=0,hidden=0,shapeCount=0,occluded=0;
+   for(let j=0;j<24;j++)for(let i=0;i<20;i++){
+      const u=(i+.5)/20,v=(j+.5)/24;
+      if(sample&&sample.at(u,v)<100)continue;
+      const X=p.x-p.w/2+u*p.w,Y=p.y+v*p.h;
+      let over=false;
+      for(const q of raw){if(q.z<=p.z||q.id===p.id)continue;
+         const qu=(X-(q.x-q.w/2))/q.w,qv=(Y-q.y)/q.h;
+         if(qu<0||qu>=1||qv<0||qv>=1)continue;
+         if((samples.get(q.id)?.at(qu,qv)||0)>135){over=true;break}
+      }
+      shapeCount++;if(over)occluded++;
+      if(u>zone.l&&u<zone.r&&v>zone.t&&v<zone.b){labelCount++;if(over)hidden++}
+   }
+   const labelCover=hidden/Math.max(labelCount,1),bodyCover=occluded/Math.max(shapeCount,1);
+   coverage.push({id:p.id,labelCover,bodyCover});
+   // Broad obstruction of package text is a hard creative failure, not a minor aesthetic preference.
+   labelPenalty+=Math.pow(labelCover/.055,1.8)*85;
+   occlusionPenalty+=Math.pow(Math.max(0,bodyCover-.12)/.06,1.8)*100;
+ }
+ // Connectedness must be real, but overlap should not destroy central product information.
+ for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+   const a=raw[i],b=raw[j],intersect=boxOverlap(a,b);
+   const vIntersect=Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y);
+   if(intersect>1500){interaction++;}
+   else if(vIntersect>120){
+     const gap=Math.max(0,Math.max(a.x-a.w/2,b.x-b.w/2)-Math.min(a.x+a.w/2,b.x+b.w/2));
+     if(gap>100)spreadPenalty+=(gap-100)*.04;
+   }
+ }
+ // Negative space and center of mass are coupled: no isolated straight rows or off-center piles.
+ const center=(minx+maxx)/2;
+ const massCenter=raw.reduce((sum,p)=>sum+p.x*p.w*p.h,0)/Math.max(1,raw.reduce((s,p)=>s+p.w*p.h,0));
+ const tooLoose=Math.max(0,span-1530)*.09+Math.max(0,tall-1500)*.04;
+ const tooTight=Math.max(0,960-span)*.15;
+ const isolation=interaction<1?40:interaction>4?(interaction-4)*10:0;
+ const score=260-hard-labelPenalty-occlusionPenalty-spreadPenalty-
+    tooLoose-tooTight-isolation-Math.abs(center-1000)*.055-Math.abs(massCenter-1000)*.035;
+ return {score,labelPenalty,occlusionPenalty,hard,interaction,coverage,visible:hard<10&&coverage.every(x=>x.labelCover<.18)};
+}
+function evaluateLayout(raw,samples){return layoutMetrics(raw,samples).score}
+function fitLayout(raw,kind=0){
+ // Single common scale multiplier; exact SKU height ratios remain invariant.
+ const left=Math.min(...raw.map(p=>p.x-p.w/2)),right=Math.max(...raw.map(p=>p.x+p.w/2));
+ const top=Math.min(...raw.map(p=>p.y)),bottom=Math.max(...raw.map(p=>p.y+p.h));
+ const scale=Math.min(1,1570/Math.max(1,right-left),1500/Math.max(1,bottom-top));
  const cx=(left+right)/2;
- // Anchor the same inferred invisible support plane, not four different podium heights.
  const foot=raw.reduce((v,p)=>v+p.y+p.h,0)/raw.length;
- return raw.map(p=>({...p,x:1000+(p.x-cx)*scale,y:1640+(p.y-foot)*scale,h:p.h*scale,w:p.w*scale}));
+ const targetFoot=1650;
+ const targetCX=kind===0?1010:kind===1?990:1000;
+ return raw.map(p=>({...p,x:targetCX+(p.x-cx)*scale,y:targetFoot+(p.y-foot)*scale,h:p.h*scale,w:p.w*scale}));
 }
 function layoutFor(kind,seed){
- const rand=seeded(seed*509+kind*1009),hh=targetHeights();
- const samplers=new Map(state.items.map(item=>[item.id,sampleProductMask(item)]));
- const all=state.items.map((item,i)=>{const crop=cropOf(item),h=hh[i];return {id:item.id,h,w:h*crop.w/crop.h,aspect:crop.w/crop.h,category:item.category||classify(item.name,crop.w/crop.h)}});
- const by=fn=>all.find(fn);
- // Distinct semantic product roles. A wide compact/sheet-mask is a rear supporting
- // geometry, not a large foreground hero; short lipstick/serum is usually foreground.
- const wide=by(x=>['compact','mask'].includes(x.category))||[...all].sort((a,b)=>b.aspect-a.aspect)[0];
- const anchor=by(x=>x.category==='foundation'||x.category==='cleanser')||[...all].sort((a,b)=>b.h-a.h)[0];
- const foreground=by(x=>x.category==='lipstick'||x.category==='serum'&&x.id!==anchor.id)||[...all].filter(x=>x.id!==anchor.id&&x.id!==wide.id).sort((a,b)=>a.h-b.h)[0];
- const roles={wide,anchor,foreground};
- // Fill any missing/duplicate roles with remaining products to preserve the exact count.
- let reserved=new Set(),assign={};
- for(let role of ['wide','anchor','foreground']){let pick=roles[role];if(pick&&!reserved.has(pick.id)){assign[role]=pick;reserved.add(pick.id)}}
- const leftover=all.filter(x=>!reserved.has(x.id));
- if(!assign.anchor){assign.anchor=leftover.shift()||all.find(x=>!reserved.has(x.id));reserved.add(assign.anchor.id)}
- if(!assign.wide){assign.wide=leftover.shift()||all.find(x=>!reserved.has(x.id));reserved.add(assign.wide.id)}
- if(!assign.foreground){assign.foreground=leftover.shift()||all.find(x=>!reserved.has(x.id));reserved.add(assign.foreground.id)}
- assign.support=all.find(x=>!reserved.has(x.id));
- // Normalized center coordinates of 4 products for three distinct art directions.
+ const rand=seeded(seed*709+kind*1517),hh=targetHeights(),samples=new Map();
+ const all=state.items.map((item,i)=>{
+   const crop=cropOf(item),h=hh[i],category=layoutCategory(item);
+   samples.set(item.id,sampleProductMask(item));
+   return {id:item.id,h,w:h*crop.w/Math.max(1,crop.h),aspect:crop.w/Math.max(1,crop.h),category};
+ });
+ const byId=new Set(),roles={};
+ const choose=(role,sorted)=>{const x=sorted.find(p=>!byId.has(p.id));if(x){roles[role]=x;byId.add(x.id)}};
+ // A broad box or compact is a rear plane; a tall cleanser/foundation is primary.
+ const tall=[...all].sort((a,b)=>b.h-a.h),wide=[...all].sort((a,b)=>b.aspect-a.aspect);
+ choose('hero',[...all.filter(p=>['foundation','cleanser'].includes(p.category)),...tall]);
+ choose('wide',[...all.filter(p=>['mask','compact'].includes(p.category)),...wide]);
+ choose('accent',[...all.filter(p=>['lipstick','serum'].includes(p.category)).sort((a,b)=>a.h-b.h),...all.sort((a,b)=>a.h-b.h)]);
+ choose('support',tall);
  const plans=[
-   {anchor:[.23,1],support:[.45,2],wide:[.72,0],foreground:[.59,3]}, // balanced
-   {anchor:[.38,1],support:[.81,2],wide:[.63,0],foreground:[.26,3]}, // layered
-   {anchor:[.23,1],support:[.64,2],wide:[.81,0],foreground:[.51,3]}  // asymmetric
+  // An anchored tall hero, supporting tall product, rear wide plane, and forward detail.
+  {name:'Hero Cascade',hero:[730,1650,2],support:[1100,1634,1],wide:[1435,1570,0],accent:[1330,1715,3]},
+  // Wide supporting geometry enters from the left; hero is central, second tall on the right.
+  {name:'Diagonal Depth',hero:[960,1670,2],support:[1400,1615,1],wide:[615,1580,0],accent:[1180,1730,3]},
+  // Strong right-hand hero and left-side structural weight; accent crosses the visual axis.
+  {name:'Editorial Offset',hero:[1400,1660,2],support:[970,1640,1],wide:[600,1590,0],accent:[1115,1720,3]}
  ];
- // Any original crop width may be large. The layout solver fits all the images
- // together without distorting independently measured heights.
- const best=[];
- for(let iter=0;iter<180;iter++){
-  const pattern=plans[kind];let positions=[];
-  for(let role of ['anchor','support','wide','foreground']){
-   const d=assign[role];if(!d)continue;
-   const r=pattern[role],dx=(rand()-.5)*(kind===2?115:85),dy=(rand()-.5)*30;
-   const bx=290+r[0]*1450+dx,foot=1640+dy;
-   positions.push({id:d.id,x:bx,y:foot-d.h,w:d.w,h:d.h,z:r[1]});
-  }
-  // Add a fallback role for 3-product jobs without cloning an existing SKU.
-  const fitted=fitLayout(positions),score=evaluateLayout(fitted,samplers);
-  best.push({kind,seed:seed+iter,positions:fitted,score});
+ const pattern=plans[kind],best=[];
+ for(let iter=0;iter<210;iter++){
+    const positions=[];
+    for(const role of ['wide','support','hero','accent']){
+       const p=roles[role];if(!p)continue;
+       const base=pattern[role];
+       // A narrow search around deliberately different art-directed directions.
+       const jitterX=iter===0?0:(rand()-.5)*180;
+       const jitterY=iter===0?0:(rand()-.5)*34;
+       positions.push({id:p.id,category:p.category,x:base[0]+jitterX,y:base[1]+jitterY-p.h,w:p.w,h:p.h,z:base[2]});
+    }
+    const candidate=fitLayout(positions,kind),metric=layoutMetrics(candidate,samples);
+    best.push({kind,seed:seed+iter,positions:candidate,score:metric.score,metrics:metric,style:pattern.name});
  }
  best.sort((a,b)=>b.score-a.score);
  return best[0];
@@ -575,7 +593,7 @@ function drawCompose(ctx,layout,W=2000){
   ctx.drawImage(item.mask,box.x,box.y,box.w,box.h,x,y,w,h);ctx.restore();
  }
 }
-function renderOptions(){const root=$('options');root.innerHTML='';state.layouts.forEach((layout,i)=>{let box=document.createElement('div');box.className='option'+(i===state.active?' selected':'');let cv=makeCanvas(480,480);drawCompose(ctx2(cv),layout,480);cv.className='';let label=document.createElement('div');label.className='optionlabel';let b=document.createElement('b');b.textContent=['Balanced','Layered','Editorial'][layout.kind]||'Option';let s=document.createElement('small');s.textContent='0'+(i+1);label.append(b,s);box.append(cv,label);box.onclick=()=>{state.active=i;renderOptions();renderComposite()};root.append(box)})}
+function renderOptions(){const root=$('options');root.innerHTML='';state.layouts.forEach((layout,i)=>{let box=document.createElement('div');box.className='option'+(i===state.active?' selected':'');let cv=makeCanvas(480,480);drawCompose(ctx2(cv),layout,480);cv.className='';let label=document.createElement('div');label.className='optionlabel';let b=document.createElement('b');b.textContent=['Hero Cascade','Diagonal Depth','Editorial Offset'][layout.kind]||'Option';let s=document.createElement('small');s.textContent='0'+(i+1);label.append(b,s);box.append(cv,label);box.onclick=()=>{state.active=i;renderOptions();renderComposite()};root.append(box)})}
 function qcText(){
  const has=state.items.length>=3&&state.items.length<=4;
  const allMasks=has&&state.items.every(i=>i.processed&&i.approved);
@@ -590,7 +608,7 @@ function qcText(){
  $('qcReport').innerHTML=`<strong>Products:</strong> ${state.items.length} supplied packshots; original RGB retained.<br>`+
  `<strong>Masks:</strong> ${state.items.filter(i=>i.approved).length}/${state.items.length} inspected and approved. ${risks.length?'Rejected cutouts detected.':'No automatic visual-quality certification.'}<br>`+
  `<strong>Dimensions:</strong> ${exact?'All matched to specific PDF sample assets.':'Unverified or estimated SKU sizes: preview ratios must not be described as certified.'}<br>`+ratioTrace+
- `<strong>Layout:</strong> Three role-aware, geometry-scored layouts; professional aesthetic quality NOT certified.<br>`+
+ `<strong>Layout:</strong> ${l?.style||'Unscored'} · estimated label occlusion ${l?.metrics?.coverage?.map(c=>Math.round(c.labelCover*100)+'%').join(' / ')||'unavailable'} · aesthetic quality NOT certified.<br>`+
  `<strong>Production status:</strong> Engineering test only; professional art-direction and edge QC still required.<br>`+
  `<strong>Output:</strong> Transparent 2000 × 2000 PNG with no podium or background.`;
  return allMasks;
@@ -601,7 +619,7 @@ for(let id of ['groundColor','overlapColor','shadowOpacity','shadowBlur','overla
 $('compBg').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.compBg=b.dataset.bg;styleBg($('compPreview'),state.compBg);$('compBg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))});
 let drag=null;$('compCanvas').onpointerdown=e=>{let layout=state.layouts[state.active];if(!layout)return;let rect=e.target.getBoundingClientRect(),x=(e.clientX-rect.left)*2000/rect.width,y=(e.clientY-rect.top)*2000/rect.height;let h=targetHeights();for(let it of [...state.items].sort((a,b)=>(getPosition(b,layout)?.z||0)-(getPosition(a,layout)?.z||0))){let p=getPosition(it,layout),box=cropOf(it),w=p.h*box.w/box.h;if(x>p.x-w/2&&x<p.x+w/2&&y>p.y&&y<p.y+p.h){drag={id:it.id,x:x-p.x,y:y-p.y};e.target.setPointerCapture(e.pointerId);break}}};$('compCanvas').onpointermove=e=>{if(!drag)return;let layout=state.layouts[state.active],rect=e.target.getBoundingClientRect(),x=(e.clientX-rect.left)*2000/rect.width,y=(e.clientY-rect.top)*2000/rect.height,p=layout.positions.find(x=>x.id===drag.id);p.x=Math.max(120,Math.min(1880,x-drag.x));p.y=Math.max(70,Math.min(1800,y-drag.y));renderComposite()};$('compCanvas').onpointerup=()=>{drag=null;renderOptions()};$('compCanvas').onpointercancel=()=>{drag=null;renderOptions()};
 $('exportBtn').onclick=()=>{if(!state.layouts.length){toast('Generate a layout first.');return}if(!qcText()){toast('Export blocked: approve every cutout after inspection.');tab('upload');return}renderComposite();download($('compCanvas').toDataURL('image/png'),`FRAME_DRAFT_Option_${state.active+1}_2000px.png`);toast('Downloaded DRAFT transparent PNG. Professional QC and verified sizes are still required.')};
-$('saveProjectBtn').onclick=()=>{let proj={version:1,items:state.items.map(i=>({id:i.id,filename:i.filename,name:i.name,brand:i.brand,ref:i.ref,status:i.status,source:i.source,cutout:imgUri(i.mask),approved:i.approved,processed:i.processed})),layouts:state.layouts,active:state.active,seed:state.seed,ground:state.ground,overlap:state.overlap,opacity:state.opacity,blur:state.blur,overlapAmt:state.overlapAmt};let blob=new Blob([JSON.stringify(proj)],{type:'application/json'});let url=URL.createObjectURL(blob);download(url,'FRAME_Project.json');setTimeout(()=>URL.revokeObjectURL(url),30000);toast('Project saved as JSON for later reopening.')};$('importBtn').onclick=e=>{e.preventDefault();$('loadProjectInput').click()};$('loadProjectInput').onchange=async e=>{let file=e.target.files[0];if(!file)return;try{let p=JSON.parse(await file.text());if(p.version!==1||!Array.isArray(p.items))throw Error('Unsupported project');state.items=[];for(let src of p.items){await addFile(src.filename,src.source,src);let item=state.items.at(-1);let image=await loadImage(src.cutout);ctx2(item.mask).clearRect(0,0,item.mask.width,item.mask.height);ctx2(item.mask).drawImage(image,0,0);item.approved=src.approved;item.processed=src.processed??true}state.layouts=(p.layouts||[]).map(l=>({kind:l.kind,seed:l.seed,positions:l.positions.map(pos=>({...pos,id:pos.id}))}));state.active=p.active||0;state.seed=p.seed||1;state.ground=p.ground||'#2c003b';state.overlap=p.overlap||'#000000';state.opacity=p.opacity??25;state.blur=p.blur??24;state.overlapAmt=p.overlapAmt??45;$('groundColor').value=state.ground;$('overlapColor').value=state.overlap;$('shadowOpacity').value=state.opacity;$('shadowBlur').value=state.blur;$('overlapAmt').value=state.overlapAmt;renderProducts();renderSizes();tab('compose');renderOptions();renderComposite();toast('Project reopened.')}catch(err){toast('Could not open project: '+err.message)}e.target.value=''};
+$('saveProjectBtn').onclick=()=>{let proj={version:1,items:state.items.map(i=>({id:i.id,filename:i.filename,name:i.name,brand:i.brand,ref:i.ref,status:i.status,source:i.source,cutout:imgUri(i.mask),approved:i.approved,processed:i.processed})),layouts:state.layouts,active:state.active,seed:state.seed,ground:state.ground,overlap:state.overlap,opacity:state.opacity,blur:state.blur,overlapAmt:state.overlapAmt};let blob=new Blob([JSON.stringify(proj)],{type:'application/json'});let url=URL.createObjectURL(blob);download(url,'FRAME_Project.json');setTimeout(()=>URL.revokeObjectURL(url),30000);toast('Project saved as JSON for later reopening.')};$('importBtn').onclick=e=>{e.preventDefault();$('loadProjectInput').click()};$('loadProjectInput').onchange=async e=>{let file=e.target.files[0];if(!file)return;try{let p=JSON.parse(await file.text());if(p.version!==1||!Array.isArray(p.items))throw Error('Unsupported project');state.items=[];for(let src of p.items){await addFile(src.filename,src.source,src);let item=state.items.at(-1);let image=await loadImage(src.cutout);ctx2(item.mask).clearRect(0,0,item.mask.width,item.mask.height);ctx2(item.mask).drawImage(image,0,0);item.approved=src.approved;item.processed=src.processed??true}state.layouts=(p.layouts||[]).map(l=>({kind:l.kind,seed:l.seed,style:l.style,score:l.score,metrics:l.metrics,positions:l.positions.map(pos=>({...pos,id:pos.id}))}));state.active=p.active||0;state.seed=p.seed||1;state.ground=p.ground||'#2c003b';state.overlap=p.overlap||'#000000';state.opacity=p.opacity??25;state.blur=p.blur??24;state.overlapAmt=p.overlapAmt??45;$('groundColor').value=state.ground;$('overlapColor').value=state.overlap;$('shadowOpacity').value=state.opacity;$('shadowBlur').value=state.blur;$('overlapAmt').value=state.overlapAmt;renderProducts();renderSizes();tab('compose');renderOptions();renderComposite();toast('Project reopened.')}catch(err){toast('Could not open project: '+err.message)}e.target.value=''};
 // Start empty so real uploads always work. Examples are opt-in via Load 4 examples.
 renderProducts();renderMask();renderSizes();
 </script><script>
