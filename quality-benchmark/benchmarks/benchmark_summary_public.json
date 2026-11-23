@@ -1,0 +1,298 @@
+{
+  "data": {
+    "protocol": "FRAME cutout & composition pre-release benchmark",
+    "ground_truth": "none: supplied prior cutouts are comparison proxies, not manually vetted reference masks",
+    "neural_models_tested": [],
+    "local_baselines": [
+      "existing cutout alpha (not attributed to any model)",
+      "white-border connectivity",
+      "OpenCV GrabCut color models"
+    ],
+    "assets": [
+      {
+        "name": "Dot & Key serum",
+        "methods": {
+          "existing_alpha_proxy": {
+            "alpha_foreground_pct": 69.5,
+            "partial_alpha_pct_of_foreground": 5.51,
+            "alpha_transition_pixels_per_perimeter_pixel": 4.02,
+            "important_components": 1,
+            "bbox": [
+              3,
+              3,
+              275,
+              590
+            ],
+            "edge_touch": false
+          },
+          "white_background_connectivity": {
+            "alpha_foreground_pct": 24.26,
+            "partial_alpha_pct_of_foreground": 0.0,
+            "alpha_transition_pixels_per_perimeter_pixel": 0.0,
+            "important_components": 1,
+            "bbox": [
+              187,
+              69,
+              477,
+              662
+            ],
+            "edge_touch": false,
+            "proxy_normalized_silhouette_iou": 0.9123,
+            "proxy_foreground_ratio": 1.0146
+          },
+          "grabcut": {
+            "alpha_foreground_pct": 23.04,
+            "partial_alpha_pct_of_foreground": 0.0,
+            "alpha_transition_pixels_per_perimeter_pixel": 0.0,
+            "important_components": 2,
+            "bbox": [
+              205,
+              69,
+              477,
+              656
+            ],
+            "edge_touch": false,
+            "proxy_normalized_silhouette_iou": 0.9614,
+            "proxy_foreground_ratio": 0.9815
+          }
+        },
+        "grabcut_status": "ok"
+      },
+      {
+        "name": "Biodance mask set",
+        "methods": {
+          "existing_alpha_proxy": {
+            "alpha_foreground_pct": 91.81,
+            "partial_alpha_pct_of_foreground": 0.62,
+            "alpha_transition_pixels_per_perimeter_pixel": 2.07,
+            "important_components": 1,
+            "bbox": [
+              3,
+              3,
+              1402,
+              1475
+            ],
+            "edge_touch": false
+          },
+          "white_background_connectivity": {
+            "alpha_foreground_pct": 47.66,
+            "partial_alpha_pct_of_foreground": 0.0,
+            "alpha_transition_pixels_per_perimeter_pixel": 0.0,
+            "important_components": 1,
+            "bbox": [
+              302,
+              261,
+              1698,
+              1734
+            ],
+            "edge_touch": false,
+            "proxy_normalized_silhouette_iou": 0.9927,
+            "proxy_foreground_ratio": 0.9968
+          },
+          "grabcut": {
+            "alpha_foreground_pct": 47.63,
+            "partial_alpha_pct_of_foreground": 0.0,
+            "alpha_transition_pixels_per_perimeter_pixel": 0.0,
+            "important_components": 1,
+            "bbox": [
+              303,
+              266,
+              1700,
+              1735
+            ],
+            "edge_touch": false,
+            "proxy_normalized_silhouette_iou": 0.9966,
+            "proxy_foreground_ratio": 1.0033
+          }
+        },
+        "grabcut_status": "ok"
+      },
+      {
+        "name": "COSRX Snail 96",
+        "methods": {
+          "existing_alpha_proxy": {
+            "alpha_foreground_pct": 72.4,
+            "partial_alpha_pct_of_foreground": 2.35,
+            "alpha_transition_pixels_per_perimeter_pixel": 2.07,
+            "important_components": 1,
+            "bbox": [
+              3,
+              3,
+              247,
+              941
+            ],
+            "edge_touch": false
+          },
+          "white_background_connectivity": {
+            "alpha_foreground_pct": 17.83,
+            "partial_alpha_pct_of_foreground": 0.0,
+            "alpha_transition_pixels_per_perimeter_pixel": 0.0,
+            "important_components": 1,
+            "bbox": [
+              416,
+              78,
+              755,
+              1016
+            ],
+            "edge_touch": false,
+            "proxy_normalized_silhouette_iou": 0.6512,
+            "proxy_foreground_ratio": 1.0212
+          },
+          "grabcut": {
+            "alpha_foreground_pct": 14.15,
+            "partial_alpha_pct_of_foreground": 0.0,
+            "alpha_transition_pixels_per_perimeter_pixel": 0.0,
+            "important_components": 1,
+            "bbox": [
+              416,
+              78,
+              739,
+              1016
+            ],
+            "edge_touch": false,
+            "proxy_normalized_silhouette_iou": 0.5283,
+            "proxy_foreground_ratio": 0.8092
+          }
+        },
+        "grabcut_status": "ok"
+      },
+      {
+        "name": "Face Shop cleanser",
+        "methods": {
+          "existing_alpha_proxy": {
+            "alpha_foreground_pct": 72.89,
+            "partial_alpha_pct_of_foreground": 3.25,
+            "alpha_transition_pixels_per_perimeter_pixel": 2.11,
+            "important_components": 1,
+            "bbox": [
+              3,
+              3,
+              234,
+              581
+            ],
+            "edge_touch": false
+          },
+          "white_background_connectivity": {
+            "alpha_foreground_pct": 15.82,
+            "partial_alpha_pct_of_foreground": 0.0,
+            "alpha_transition_pixels_per_perimeter_pixel": 0.0,
+            "important_components": 1,
+            "bbox": [
+              288,
+              127,
+              519,
+              709
+            ],
+            "edge_touch": false,
+            "proxy_normalized_silhouette_iou": 0.9811,
+            "proxy_foreground_ratio": 0.9907
+          },
+          "grabcut": {
+            "alpha_foreground_pct": 15.75,
+            "partial_alpha_pct_of_foreground": 0.0,
+            "alpha_transition_pixels_per_perimeter_pixel": 0.0,
+            "important_components": 1,
+            "bbox": [
+              288,
+              127,
+              519,
+              705
+            ],
+            "edge_touch": false,
+            "proxy_normalized_silhouette_iou": 0.9995,
+            "proxy_foreground_ratio": 0.9995
+          }
+        },
+        "grabcut_status": "ok"
+      }
+    ],
+    "composition": {
+      "composition_1_DRAFT_2000.png": {
+        "name": "composition_1_DRAFT_2000.png",
+        "rgba_dimensions": [
+          2000,
+          2000
+        ],
+        "transparent": true,
+        "occupied_alpha_bbox": [
+          358,
+          546,
+          1661,
+          1671
+        ],
+        "occupied_width_fraction": 0.651,
+        "occupied_height_fraction": 0.562,
+        "edge_touch": false,
+        "shadow_pixel_change_from_comparison": "not available without per-layer no-shadow render",
+        "visual_art_direction": "REVIEW_REQUIRED; cannot certify by geometry alone"
+      },
+      "composition_2_DRAFT_2000.png": {
+        "name": "composition_2_DRAFT_2000.png",
+        "rgba_dimensions": [
+          2000,
+          2000
+        ],
+        "transparent": true,
+        "occupied_alpha_bbox": [
+          159,
+          526,
+          1436,
+          1726
+        ],
+        "occupied_width_fraction": 0.638,
+        "occupied_height_fraction": 0.6,
+        "edge_touch": false,
+        "shadow_pixel_change_from_comparison": "not available without per-layer no-shadow render",
+        "visual_art_direction": "REVIEW_REQUIRED; cannot certify by geometry alone"
+      },
+      "composition_3_DRAFT_2000.png": {
+        "name": "composition_3_DRAFT_2000.png",
+        "rgba_dimensions": [
+          2000,
+          2000
+        ],
+        "transparent": true,
+        "occupied_alpha_bbox": [
+          518,
+          501,
+          1684,
+          1747
+        ],
+        "occupied_width_fraction": 0.583,
+        "occupied_height_fraction": 0.623,
+        "edge_touch": false,
+        "shadow_pixel_change_from_comparison": "not available without per-layer no-shadow render",
+        "visual_art_direction": "REVIEW_REQUIRED; cannot certify by geometry alone"
+      }
+    },
+    "release_decision": "NO_GO"
+  },
+  "gate": {
+    "decision": "NO_GO",
+    "rejection_reasons": [
+      "COSRX Snail 96: grabcut disagrees with prior alpha silhouette (0.528 < 0.90 proxy threshold)",
+      "COSRX Snail 96: white_background_connectivity disagrees with prior alpha silhouette (0.651 < 0.90 proxy threshold)",
+      "No independently human-verified gold segmentation masks for original products",
+      "No neural segmentation weights were runnable in the evaluation environment",
+      "sculptural_cluster: weak depth stagger; feet stdev 0.030 < 0.045",
+      "sculptural_cluster: insufficient vertical rhythm 0.565 < .61",
+      "diagonal_interlock: fewer than two meaningful layer interactions",
+      "diagonal_interlock: insufficient vertical rhythm 0.602 < .61",
+      "editorial_asymmetry: weak depth stagger; feet stdev 0.043 < 0.045",
+      "editorial_asymmetry: fewer than two meaningful layer interactions",
+      "Not all product heights have evidence-compatible verified scale",
+      "Independent human art-direction acceptance of the actual exports has not been recorded"
+    ],
+    "manual_review_items": [
+      "Dot & Key serum: grabcut has no antialiasing; visually check jagged edges",
+      "Dot & Key serum: white_background_connectivity has no antialiasing; visually check jagged edges",
+      "Biodance mask set: grabcut has no antialiasing; visually check jagged edges",
+      "Biodance mask set: white_background_connectivity has no antialiasing; visually check jagged edges",
+      "COSRX Snail 96: grabcut has no antialiasing; visually check jagged edges",
+      "COSRX Snail 96: white_background_connectivity has no antialiasing; visually check jagged edges",
+      "Face Shop cleanser: grabcut has no antialiasing; visually check jagged edges",
+      "Face Shop cleanser: white_background_connectivity has no antialiasing; visually check jagged edges"
+    ],
+    "claim": "Automated checks can veto obvious errors, never certify Photoshop-level quality"
+  }
+}
