@@ -1,0 +1,23 @@
+name: FRAME Quality Benchmark — Synthetic Regression
+on:
+  push:
+    branches: [research/frame-quality-benchmark]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  benchmark-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install benchmark dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r quality-benchmark/requirements.txt
+      - name: Run public synthetic regression only
+        run: |
+          cd quality-benchmark
+          python -m pytest -q benchmarks/test_public_synthetic.py
